@@ -1,8 +1,8 @@
 import numpy as np
 import random
 import os
+from tqdm import tqdm
 from PIL import Image
-from .utils import SSIM
 
 import torch
 import torch.nn as nn
@@ -16,8 +16,7 @@ def train(model, device, train_loader):
     model.to(device)
     train_loss_D, train_loss_G = 0., 0.
     
-    ssim = 0.0
-    for batch_idx, batch_data in enumerate(train_loader):
+    for batch_idx, batch_data in enumerate(tqdm(train_loader)):
         images = batch_data.images.to(device)
         
         model.optimize_parameters(images)
@@ -33,7 +32,6 @@ def test(model, device, test_loader):
     model.eval()
     model.to(device)
     test_loss_D, test_loss_G = 0., 0.
-    ssim = 0.0
     
     for batch_idx, batch_data in enumerate(test_loader):
         images = batch_data.images.to(device)

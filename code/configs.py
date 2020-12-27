@@ -18,10 +18,9 @@ class Parser:
 
         self.training_configs_parser = self.subparsers.add_parser('training', help='training configurations')
         self.training_configs_parser.add_argument('--batchsize', '-bs', type=int, default=16)
-        self.training_configs_parser.add_argument('--learning_rate', '-lr', type=float, default=3e-4)
+        self.training_configs_parser.add_argument('--learning_rate_G', '-lrG', type=float, default=3e-4)
+        self.training_configs_parser.add_argument('--learning_rate_D', '-lrD', type=float, default=15e-4)
         self.training_configs_parser.add_argument('--epochs', '-e', type=int, default=10)
-        self.training_configs_parser.add_argument('--lambda_L1', type=float, default=100.0)
-        self.training_configs_parser.add_argument('--lambda_GANLoss', type=float, default=1)
         self.training_configs_parser.add_argument("--latent_dim", type=int, default=100)
         self.training_configs_parser.add_argument('--beta1', type=float, default=0.5)
 

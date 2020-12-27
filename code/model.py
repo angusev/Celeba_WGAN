@@ -71,10 +71,10 @@ class WGAN(nn.Module):
         print_params_number(self.model_D)
         
         self.optimizer_G = torch.optim.Adam(self.model_G.parameters(),
-                                            lr=configs.learning_rate,
+                                            lr=configs.learning_rate_G,
                                             betas=(configs.beta1, 0.999))
         self.optimizer_D = torch.optim.Adam(self.model_D.parameters(),
-                                            lr=configs.learning_rate,
+                                            lr=configs.learning_rate_D,
                                             betas=(configs.beta1, 0.999))
 
         self.losses = {'loss_D': None, 'loss_G': None}
@@ -83,7 +83,7 @@ class WGAN(nn.Module):
 
     def backward_D(self, train_it=True):
         pred_real = self.model_D(self.real_imgs)
-        pred_fake = self.model_D(self.real_imgs)
+        pred_fake = self.model_D(self.fake_imgs)
         
         self.loss_D =  -torch.mean(pred_real) + torch.mean(pred_fake)
         
@@ -93,28 +93,27 @@ class WGAN(nn.Module):
         self.losses['loss_D'] = self.loss_D
         
     def backward_G(self, train_it=True):
-        self.loss_G =  -torch.mean(self.model_D(self.fake_imgs))
+        self.loss_G = -torch.mean(self.model_D(self.fake_imgs))
         if train_it:
             self.loss_G.backward()
         self.losses['loss_G'] = self.loss_G
 
-        
-    def set_requires_grad(self, model, requires_grad):
+    @staticmethod
+    def set_requires_grad(model, requires_grad):
         for p in model.parameters():
             p.requires_grad = requires_grad
                  
     def optimize_parameters(self, images):
         self.real_imgs = images
-        
-        z = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
-                                                             (self.real_imgs.shape[0], self.configs.latent_dim))))
-        self.fake_imgs = self.model_G(z)
+        self.fake_imgs = self.generate_samples(self.real_imgs.shape[0])
 
         self.set_requires_grad(self.model_D, True)
         self.optimizer_D.zero_grad()
         self.backward_D()
         self.optimizer_D.step()
         
+        self.fake_imgs = self.generate_samples(self.real_imgs.shape[0])
+
         self.set_requires_grad(self.model_D, False)
         self.optimizer_G.zero_grad()
         self.backward_G()
@@ -122,9 +121,12 @@ class WGAN(nn.Module):
 
     def evaluate(self, images):
         self.real_imgs = images
-        z = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
-                                                             (self.real_imgs.shape[0], self.configs.latent_dim))))
-        self.fake_imgs = self.model_G(z)
+        self.fake_imgs = self.generate_samples(self.real_imgs.shape[0])
         
         self.backward_D(train_it=False)
         self.backward_G(train_it=False)
+    
+    def generate_samples(self, number):
+        z = torch.randn((number, self.configs.latent_dim),
+                        device=self.configs.device)
+        return self.model_G(z)
