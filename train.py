@@ -5,14 +5,14 @@ import sys
 from PIL import Image
 
 import torch
-torch.multiprocessing.set_sharing_strategy('file_system')
+# torch.multiprocessing.set_sharing_strategy('file_system')
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import random_split
 from torchvision import models
 
 from code.dataclasses import get_dataloaders
-from code.model import WGAN
+from code.model import WGAN, weights_init
 from code.utils import (get_image_files,
                         show_random_examples)
 from code.trainer import train, test
@@ -42,9 +42,11 @@ def main(args):
     if launch_configs.wandb:
         wandb.init(project="celeba_wgan", name=launch_configs.wandb)
     
-    train_loader, valid_loader = get_dataloaders(paths.dataset, training_configs, launch_configs)
+    train_dataset, valid_dataset, train_loader, valid_loader = get_dataloaders(paths, training_configs, launch_configs)
     
     model = WGAN(training_configs).to(DEVICE)
+    weights_init(model)
+
     try:
         for epoch in range(training_configs.epochs):
             train_losses = train(model, DEVICE, train_loader)
@@ -54,7 +56,15 @@ def main(args):
             print(f'\tTrain losses: {[np.round(l.item(), 4) for l in train_losses]}')
             print(f'\tValid loss:   {[np.round(l.item(), 4) for l in test_losses]}')
             
-            show_random_examples(model, DEVICE, paths.examples / f'epoch{epoch + 1}.jpg')
+            show_random_examples(model.model_G, valid_dataset, DEVICE, paths.examples / f'epoch{epoch + 1}.jpg')
+            if launch_configs.wandb:
+                train_loss_D, train_loss_G = train_losses
+                test_loss_D, test_loss_G = test_losses
+                wandb.log({"train_loss_D": train_loss_D,
+                           "train_loss_G": train_loss_G,
+                           "test_loss_D": test_loss_D,
+                           "test_loss_G": test_loss_G
+                          })
     except KeyboardInterrupt:
         print('\nBye')
   

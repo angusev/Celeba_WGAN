@@ -15,6 +15,7 @@ class Parser:
         self.paths_parser = self.subparsers.add_parser('paths', help='args for paths to files')
         self.paths_parser.add_argument('--dataset', type=str, default='img_align_celeba')
         self.paths_parser.add_argument('--examples', type=str, default='examples')
+        self.paths_parser.add_argument('--attributes', type=str, default='./Anno/list_attr_celeba.txt')
 
         self.training_configs_parser = self.subparsers.add_parser('training', help='training configurations')
         self.training_configs_parser.add_argument('--batchsize', '-bs', type=int, default=16)
@@ -38,6 +39,7 @@ class Parser:
         paths.examples = project_root / paths.examples / curr_time
         paths.examples.parent.mkdir(exist_ok=True)
         paths.examples.mkdir()
+        paths.attributes = Path(paths.attributes)
         
         training_configs, _ = self.training_configs_parser.parse_known_args(args)
         launch_configs, _ = self.launch_configs_parser.parse_known_args(args)

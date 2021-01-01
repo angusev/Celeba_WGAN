@@ -17,9 +17,9 @@ def train(model, device, train_loader):
     train_loss_D, train_loss_G = 0., 0.
     
     for batch_idx, batch_data in enumerate(tqdm(train_loader)):
-        images = batch_data.images.to(device)
+        images, conditions = batch_data.images.to(device), batch_data.conditions.to(device)
         
-        model.optimize_parameters(images)
+        model.optimize_parameters(images, conditions)
         
         ratio = len(images) / len(train_loader.dataset)
         train_loss_D += model.losses['loss_D'] * ratio
@@ -34,8 +34,8 @@ def test(model, device, test_loader):
     test_loss_D, test_loss_G = 0., 0.
     
     for batch_idx, batch_data in enumerate(test_loader):
-        images = batch_data.images.to(device)
-        model.evaluate(images)
+        images, conditions = batch_data.images.to(device), batch_data.conditions.to(device)
+        model.evaluate(images, conditions)
         
         ratio = len(images) / len(test_loader.dataset)
         test_loss_D += model.losses['loss_D'] * ratio
