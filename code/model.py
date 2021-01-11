@@ -228,13 +228,8 @@ class WGAN(nn.Module):
         self.optimizer_G.step()
 
     def evaluate(self, images, conditions):
-#         conditions = torch.randn(conditions.shape).to('cuda')  ####################!!!!!!!!!!!!!!!!!!
-#         conditions = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
-#                                                              (self.real_imgs.shape[0], self.configs.latent_dim))))
-        
         self.real_imgs = images
         
-#         self.fake_imgs = self.model_G(conditions.unsqueeze(2).unsqueeze(3))
         self.fake_imgs = self.model_G(conditions)
         
         self.backward_D(train_it=False)
