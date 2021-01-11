@@ -159,10 +159,6 @@ class WGAN(nn.Module):
     def optimize_parameters(self, images, conditions):
         self.real_imgs = images
         self.conditions = conditions
-        
-#         conditions = torch.randn(conditions.shape).to('cuda')  ####################!!!!!!!!!!!!!!!!!!
-#         conditions = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
-#                                                              (self.real_imgs.shape[0], self.configs.latent_dim))))
         self.fake_imgs = self.model_G(conditions)
 
         self.set_requires_grad(self.model_D, True)
