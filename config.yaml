@@ -1,0 +1,17 @@
+paths:
+  dataset: "img_align_celeba"
+  examples: "examples"
+  attributes: "./Anno/list_attr_celeba.txt"
+
+training:
+  batchsize: 16
+  learning_rate_G: 3e-4
+  learning_rate_D: 15e-4
+  epochs: 10
+  latent_dim: 100
+  beta1: 0.5
+  device: "cuda"
+
+launch:
+  wandb: False
+  dry_try: False
