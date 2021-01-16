@@ -8,22 +8,20 @@ from pathlib import Path
 from PIL import Image
 
 import torch
+from torch.autograd import Variable
 from torchvision import transforms
 
-try:
-    import matplotlib.pyplot as plt
-except ModuleNotFoundError as e:
-    pass
+import matplotlib.pyplot as plt
 
 
 def random_string(length):
     pool = string.ascii_lowercase + string.digits
-    return ''.join(random.choice(pool) for i in range(length))
+    return "".join(random.choice(pool) for i in range(length))
 
 
 def print_params_number(model):
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f'{type(model).__name__} of {total_params:,} parameters')
+    print(f"{type(model).__name__} of {total_params:,} parameters")
 
 
 def get_image_files(path: str) -> List[str]:
@@ -40,54 +38,33 @@ def get_random_examples(model, test_dataset, device):
     model.to(device)
 
     rand_idx = random.randint(0, len(test_dataset) - 1)
-    file = test_dataset._files[rand_idx]
-    data, target = test_dataset[rand_idx].source.to(device), test_dataset[rand_idx].target.to(device)
-    output = model(data.unsqueeze(0)).squeeze()
+    file = test_dataset.dataset._files[rand_idx]
+    image, condition = (
+        test_dataset[rand_idx].image.to(device),
+        test_dataset[rand_idx].condition.to(device),
+    )
+    #     output = model(condition.unsqueeze(0).unsqueeze(2).unsqueeze(3)).squeeze()
+    #     conditions = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1, (1, 80))))
+    output = model(condition.unsqueeze(0)).squeeze()
 
     image = Image.open(file)
-    w, h = image.size
 
-    image_from = image.crop((w // 2, 0, w, h))
-    image_to = image.crop((0, 0, w // 2, h))
-    
     to_pil = transforms.ToPILImage()
     generated = to_pil(output.cpu().detach())
-    return image_from, image_to, generated
+    return image, generated
 
 
+@torch.no_grad()
 def show_random_examples(model, test_dataset, device, path):
-    fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, sharey=True, figsize=(15, 5))
+    model.eval()
+    fig, axs = plt.subplots(
+        nrows=10, ncols=2, sharex=True, sharey=True, figsize=(2, 10)
+    )
 
-    image_from, image_to, generated = get_random_examples(model, test_dataset, device)
-    
-    ax0.imshow(image_from)
-    ax1.imshow(image_to)
-    ax2.imshow(generated)
-    plt.savefig(path, dpi=100)
+    for ax0, ax1 in axs:
+        image, generated = get_random_examples(model, test_dataset, device)
+
+        ax0.imshow(image)
+        ax1.imshow(generated)
+    plt.savefig(path, dpi=500)
     plt.show()
-
-    
-def SSIM(im1, im2):
-    mean1 = torch.mean(im1, dim=[-2, -1], keepdim=True)
-    mean2 = torch.mean(im2, dim=[-2, -1], keepdim=True)
-    
-    var1 = torch.sqrt(torch.var(im1, dim=(-2, -1)))
-    var2 = torch.sqrt(torch.var(im2, dim=(-2, -1)))
-    
-    cov = torch.mean((im1 - mean1) * (im2 - mean2), dim=(-2, -1))
-    
-    mean1 = mean1.squeeze()
-    mean2 = mean2.squeeze()
-    
-    L = 1
-    k1 = 0.01
-    k2 = 0.03
-    
-    c1 = (k1 * L) ** 2
-    c2 = (k2 * L) ** 2
-    
-    numerator = (2 * mean1 * mean2 + c1) * (2 * cov + c2)
-    denumerator = (mean1 * mean1 + mean2 * mean2 + c1) * (var1 * var1 + var2 * var2 + c2)
-    
-    ssim = torch.mean(numerator / denumerator)
-    return ssim
