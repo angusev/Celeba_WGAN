@@ -23,16 +23,16 @@ nz = 40
 class PrintLayer(nn.Module):
     def __init__(self):
         super(PrintLayer, self).__init__()
-    
+
     def forward(self, x):
-#         print(x.shape)
+        #         print(x.shape)
         return x
-    
+
 
 # class Generator(nn.Module):
 #     def __init__(self):
 #         super(Generator, self).__init__()
-        
+
 #         def block(in_feat, out_feat, normalize=True):
 #             layers = [nn.Linear(in_feat, out_feat)]
 #             if normalize:
@@ -60,7 +60,7 @@ class PrintLayer(nn.Module):
 # class Discriminator(nn.Module):
 #     def __init__(self):
 #         super(Discriminator, self).__init__()
-        
+
 #         self.model = nn.Sequential(
 #             nn.Linear(int((img_shape[0] + 1) * np.prod(img_shape[1:])), 512),
 #             nn.LeakyReLU(0.2, inplace=True),
@@ -76,30 +76,36 @@ class PrintLayer(nn.Module):
 #         img_flat = to_input.view(to_input.shape[0], -1)
 #         validity = self.model(img_flat)
 #         return validity
-    
-    
+
+
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
         ngf = 64
-        
-        def block(in_channels,
-                  out_channels,
-                  kernel_size=4,
-                  stride=2,
-                  padding=1,
-                  normalize=True):
-            layers = [nn.ConvTranspose2d(in_channels,
-                                         out_channels,
-                                         kernel_size=kernel_size,
-                                         stride=stride,
-                                         padding=normalize,
-                                         bias=False)]
+
+        def block(
+            in_channels,
+            out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
+            normalize=True,
+        ):
+            layers = [
+                nn.ConvTranspose2d(
+                    in_channels,
+                    out_channels,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=normalize,
+                    bias=False,
+                )
+            ]
             if normalize:
                 layers.append(nn.BatchNorm2d(out_channels))
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
-        
+
         self.main = nn.Sequential(
             *block(nz * 2, ngf * 8, stride=1, padding=0, normalize=False),
             PrintLayer(),
@@ -120,10 +126,10 @@ class Generator(nn.Module):
 
     def forward(self, conditions):
         conditions_exp = conditions.unsqueeze(2).unsqueeze(3)
-        noise = torch.randn(conditions_exp.shape).to('cuda')
+        noise = torch.randn(conditions_exp.shape).to("cuda")
         to_input = torch.cat((conditions_exp, noise), 1)
         images = self.main(to_input)
-        images = images[:, :, :img_shape[1], :img_shape[2]]  # cropping
+        images = images[:, :, : img_shape[1], : img_shape[2]]  # cropping
         return images
 
 
@@ -131,24 +137,30 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
         ndf = 64
-        
-        def block(in_channels,
-                  out_channels,
-                  kernel_size=4,
-                  stride=2,
-                  padding=1,
-                  normalize=True):
-            layers = [nn.Conv2d(in_channels,
-                                out_channels,
-                                kernel_size=kernel_size,
-                                stride=stride,
-                                padding=normalize,
-                                bias=False)]
+
+        def block(
+            in_channels,
+            out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
+            normalize=True,
+        ):
+            layers = [
+                nn.Conv2d(
+                    in_channels,
+                    out_channels,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=normalize,
+                    bias=False,
+                )
+            ]
             if normalize:
                 layers.append(nn.BatchNorm2d(out_channels))
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
-        
+
         self.main = nn.Sequential(
             *block(3 + 1, ndf, normalize=False),
             *block(ndf, ndf * 2),
@@ -158,8 +170,9 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, images, conditions):
-        cond = F.interpolate(conditions.unsqueeze(1).unsqueeze(dim=3),
-                             size=img_shape[1:]).squeeze(dim=3)
+        cond = F.interpolate(
+            conditions.unsqueeze(1).unsqueeze(dim=3), size=img_shape[1:]
+        ).squeeze(dim=3)
         to_input = torch.cat((cond, images), 1)
         return self.main(to_input)
 
@@ -171,47 +184,50 @@ class WGAN(nn.Module):
         self.model_D = Discriminator().to(configs.device)
         print_params_number(self.model_G)
         print_params_number(self.model_D)
-        
-        self.optimizer_G = torch.optim.Adam(self.model_G.parameters(),
-                                            lr=configs.learning_rate_G,
-                                            betas=(configs.beta1, 0.999))
-        self.optimizer_D = torch.optim.Adam(self.model_D.parameters(),
-                                            lr=configs.learning_rate_D,
-                                            betas=(configs.beta1, 0.999))
 
-        self.losses = {'loss_D': None, 'loss_G': None}
+        self.optimizer_G = torch.optim.Adam(
+            self.model_G.parameters(),
+            lr=configs.learning_rate_G,
+            betas=(configs.beta1, 0.999),
+        )
+        self.optimizer_D = torch.optim.Adam(
+            self.model_D.parameters(),
+            lr=configs.learning_rate_D,
+            betas=(configs.beta1, 0.999),
+        )
+
+        self.losses = {"loss_D": None, "loss_G": None}
         self.configs = configs
-
 
     def backward_D(self, train_it=True):
         pred_real = self.model_D(self.real_imgs, self.conditions)
         pred_fake = self.model_D(self.fake_imgs, self.conditions)
-        
-        self.loss_D =  -torch.mean(pred_real) + torch.mean(pred_fake)
-        
+
+        self.loss_D = -torch.mean(pred_real) + torch.mean(pred_fake)
+
         if train_it:
             self.loss_D.backward()
-        
-        self.losses['loss_D'] = self.loss_D
-        
+
+        self.losses["loss_D"] = self.loss_D
+
     def backward_G(self, train_it=True):
         self.loss_G = -torch.mean(self.model_D(self.fake_imgs, self.conditions))
         if train_it:
             self.loss_G.backward()
-        self.losses['loss_G'] = self.loss_G
+        self.losses["loss_G"] = self.loss_G
 
     @staticmethod
     def set_requires_grad(model, requires_grad):
         for p in model.parameters():
             p.requires_grad = requires_grad
-                 
+
     def optimize_parameters(self, images, conditions):
         self.real_imgs = images
         self.conditions = conditions
-        
-#         conditions = torch.randn(conditions.shape).to('cuda')  ####################!!!!!!!!!!!!!!!!!!
-#         conditions = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
-#                                                              (self.real_imgs.shape[0], self.configs.latent_dim))))
+
+        #         conditions = torch.randn(conditions.shape).to('cuda')  ####################!!!!!!!!!!!!!!!!!!
+        #         conditions = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
+        #                                                              (self.real_imgs.shape[0], self.configs.latent_dim))))
         self.fake_imgs = self.model_G(conditions)
 
         self.set_requires_grad(self.model_D, True)
@@ -219,32 +235,31 @@ class WGAN(nn.Module):
         self.backward_D()
         self.optimizer_D.step()
 
-        
         self.fake_imgs = self.model_G(conditions)
-        
+
         self.set_requires_grad(self.model_D, False)
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
 
     def evaluate(self, images, conditions):
-#         conditions = torch.randn(conditions.shape).to('cuda')  ####################!!!!!!!!!!!!!!!!!!
-#         conditions = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
-#                                                              (self.real_imgs.shape[0], self.configs.latent_dim))))
-        
+        #         conditions = torch.randn(conditions.shape).to('cuda')  ####################!!!!!!!!!!!!!!!!!!
+        #         conditions = Variable(torch.cuda.FloatTensor(np.random.normal(0, 1,
+        #                                                              (self.real_imgs.shape[0], self.configs.latent_dim))))
+
         self.real_imgs = images
-        
-#         self.fake_imgs = self.model_G(conditions.unsqueeze(2).unsqueeze(3))
+
+        #         self.fake_imgs = self.model_G(conditions.unsqueeze(2).unsqueeze(3))
         self.fake_imgs = self.model_G(conditions)
-        
+
         self.backward_D(train_it=False)
         self.backward_G(train_it=False)
 
-    
+
 def weights_init(m):
     classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
+    if classname.find("Conv") != -1:
         nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
+    elif classname.find("BatchNorm") != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
