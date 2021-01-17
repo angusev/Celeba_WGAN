@@ -24,7 +24,7 @@ class PrintLayer(nn.Module):
         super(PrintLayer, self).__init__()
 
     def forward(self, x):
-        #         print(x.shape)
+        # print(x.shape)
         return x
 
 class Generator(nn.Module):
@@ -41,14 +41,23 @@ class Generator(nn.Module):
             normalize=True,
         ):
             layers = [
-                nn.ConvTranspose2d(
+                nn.Upsample(scale_factor=2, mode='bilinear'),
+                nn.Conv2d(
                     in_channels,
                     out_channels,
                     kernel_size=kernel_size,
-                    stride=stride,
-                    padding=normalize,
+                    # stride=stride,
+                    padding=2,
                     bias=False,
                 )
+                # nn.ConvTranspose2d(
+                #     in_channels,
+                #     out_channels,
+                #     kernel_size=kernel_size,
+                #     stride=stride,
+                #     padding=padding,
+                #     bias=False,
+                # )
             ]
             if normalize:
                 layers.append(nn.BatchNorm2d(out_channels))
@@ -56,6 +65,7 @@ class Generator(nn.Module):
             return layers
 
         self.main = nn.Sequential(
+            PrintLayer(),
             *block(nz * 2, ngf * 8, stride=1, padding=0, normalize=False),
             PrintLayer(),
             *block(ngf * 8, ngf * 8),
@@ -68,7 +78,8 @@ class Generator(nn.Module):
             PrintLayer(),
             *block(ngf * 2, ngf),
             PrintLayer(),
-            torch.nn.ConvTranspose2d(ngf, 3, 4, 2, 1, bias=False),
+            nn.Upsample(scale_factor=2, mode='bilinear'),
+            torch.nn.Conv2d(ngf, 3, 4, padding=2, bias=False),
             PrintLayer(),
             nn.Tanh()
         )
@@ -77,7 +88,9 @@ class Generator(nn.Module):
         conditions_exp = conditions.unsqueeze(2).unsqueeze(3)
         noise = torch.randn(conditions_exp.shape).to("cuda")
         to_input = torch.cat((conditions_exp, noise), 1)
+
         images = self.main(to_input)
+
         images = images[:, :, : img_shape[1], : img_shape[2]]  # cropping
         return images
 
@@ -151,12 +164,9 @@ class WGAN(nn.Module):
     def backward_D(self, train_it=True):
         pred_real = self.model_D(self.real_imgs, self.conditions)
         pred_fake = self.model_D(self.fake_imgs, self.conditions)
-
         self.loss_D = -torch.mean(pred_real) + torch.mean(pred_fake)
-
         if train_it:
             self.loss_D.backward()
-
         self.losses["loss_D"] = self.loss_D.item()
 
     def backward_G(self, train_it=True):
@@ -188,7 +198,6 @@ class WGAN(nn.Module):
 
         self.backward_D(train_it=False)
         self.backward_G(train_it=False)
-
 
 def weights_init(m):
     classname = m.__class__.__name__

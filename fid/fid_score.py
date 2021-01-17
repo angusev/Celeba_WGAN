@@ -187,9 +187,7 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     diff = mu1 - mu2
 
     # Product might be almost singular
-    print("get stucked before here")
     covmean, _ = linalg.sqrtm(sigma1.dot(sigma2), disp=False)
-    print("or not")
     if not np.isfinite(covmean).all():
         msg = (
             "fid calculation produces singular product; "
