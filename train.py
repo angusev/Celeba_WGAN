@@ -14,9 +14,10 @@ from torchvision import models
 
 from code.dataclasses import get_dataloaders
 from code.model import WGAN, weights_init
-from code.utils import get_image_files, show_random_examples
+from code.utils import show_random_examples, save_random_examples
 from code.trainer import train, test
 from code.configs import Parser
+from fid.fid_score import calculate_fid_given_paths
 
 import wandb
 
@@ -29,15 +30,12 @@ def set_seed(seed):
     np.random.seed(seed)
 
 
-DEVICE = torch.device("cuda")
-
-
 def main(args):
     #     set_seed(179)
 
     parser = Parser()
     paths, training_configs, launch_configs = parser.parse_args(args)
-    training_configs.device = DEVICE
+    training_configs.device = torch.device("cuda")
 
     if launch_configs.wandb:
         wandb.init(project="celeba_wgan", name=launch_configs.wandb)
@@ -46,24 +44,41 @@ def main(args):
         paths, training_configs, launch_configs
     )
 
-    model = WGAN(training_configs).to(DEVICE)
+    model = WGAN(training_configs).to(training_configs.device)
     weights_init(model)
 
     try:
         for epoch in range(training_configs.epochs):
-            train_losses = train(model, DEVICE, train_loader)
-            test_losses = test(model, DEVICE, valid_loader)
+            train_losses = train(model, training_configs.device, train_loader)
+            test_losses = test(model, training_configs.device, valid_loader)
 
             print(f"Epoch {epoch + 1} / {training_configs.epochs} \t  [loss_D, loss_G]")
-            print(f"\tTrain losses: {[np.round(l.item(), 4) for l in train_losses]}")
-            print(f"\tValid loss:   {[np.round(l.item(), 4) for l in test_losses]}")
+            print(f"\tTrain losses: {[np.round(l, 4) for l in train_losses]}")
+            print(f"\tValid loss:   {[np.round(l, 4) for l in test_losses]}")
 
             show_random_examples(
                 model.model_G,
                 valid_dataset,
-                DEVICE,
-                paths.examples / f"epoch{epoch + 1}.jpg",
+                training_configs.device,
+                paths.examples / f"epoch-{epoch + 1}.jpg",
             )
+
+            if epoch % 10 == 0:
+                save_random_examples(
+                    model.model_G,
+                    valid_dataset,
+                    training_configs.device,
+                    paths.fid_orig,
+                    paths.fid_gen
+                )
+                fid_score = calculate_fid_given_paths(
+                    (paths.fid_orig, paths.fid_gen),
+                    batch_size=100,
+                    device=torch.device("cuda"),
+                    dims=64
+                )
+                print(f'FID score:', np.round(fid_score, 2))
+
             if launch_configs.wandb:
                 train_loss_D, train_loss_G = train_losses
                 test_loss_D, test_loss_G = test_losses
@@ -73,6 +88,7 @@ def main(args):
                         "train_loss_G": train_loss_G,
                         "test_loss_D": test_loss_D,
                         "test_loss_G": test_loss_G,
+                        "fid_score": fid_score
                     }
                 )
     except KeyboardInterrupt:

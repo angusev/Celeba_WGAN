@@ -88,8 +88,8 @@ def make_transform():
     return transform
 
 
-def get_dataloaders(config):
-    files = get_image_files(config.paths.dataset)
+def get_dataloaders(paths, training_configs, launch_configs):
+    files = get_image_files(paths.dataset)
 
     with open("Anno/list_attr_celeba.txt") as f:
         attrs = list(map(lambda x: x.split(), f.read().splitlines()))
@@ -98,10 +98,10 @@ def get_dataloaders(config):
         id2idx = dict(zip(attrs["id"].values.tolist(), range(attrs.shape[0])))
         attrs = torch.cuda.FloatTensor(
             attrs.drop(columns=["id"]).values.astype(float)
-        ).to(config.training.device)
+        ).to(training_configs.device)
 
-    if config.launch.dry_try:
-        files = files[::10]
+    if launch_configs.dry_try:
+        files = files[::1000]
 
     dataset = ImageDataset(files, attrs, id2idx, make_transform())
     train_files_count = len(files) * 7 // 10
@@ -118,7 +118,7 @@ def get_dataloaders(config):
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=config.training.batchsize,
+        batch_size=training_configs.batchsize,
         shuffle=True,
         collate_fn=DatasetItem.collate,
         #         num_workers=num_workers,
@@ -126,7 +126,7 @@ def get_dataloaders(config):
     )
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
-        batch_size=config.training.batchsize,
+        batch_size=training_configs.batchsize,
         shuffle=True,
         collate_fn=DatasetItem.collate,
         #         num_workers=num_workers,

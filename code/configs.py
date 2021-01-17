@@ -53,11 +53,15 @@ class Parser:
         project_root = Path.cwd()
         curr_time = str(datetime.datetime.now()).replace(" ", "_")
         paths.dataset = project_root / paths.dataset
-
         paths.examples = project_root / paths.examples / curr_time
         paths.examples.parent.mkdir(exist_ok=True)
         paths.examples.mkdir()
         paths.attributes = Path(paths.attributes)
+        paths.fid_orig = project_root / 'fid' / 'examples' / 'orig'
+        paths.fid_gen = project_root / 'fid' / 'examples' / 'gen'
+        paths.fid_orig.mkdir(parents=True, exist_ok=True)
+        paths.fid_gen.mkdir(parents=True, exist_ok=True)
+        
 
         training_configs, _ = self.training_configs_parser.parse_known_args(args)
         launch_configs, _ = self.launch_configs_parser.parse_known_args(args)
