@@ -165,24 +165,19 @@ class WGAN(nn.Module):
             self.loss_G.backward()
         self.losses["loss_G"] = self.loss_G.item()
 
-    @staticmethod
-    def set_requires_grad(model, requires_grad):
-        for p in model.parameters():
-            p.requires_grad = requires_grad
-
     def optimize_parameters(self, images, conditions):
         self.real_imgs = images
         self.conditions = conditions
         self.fake_imgs = self.model_G(conditions)
 
-        self.set_requires_grad(self.model_D, True)
+        self.model_D.train()
         self.optimizer_D.zero_grad()
         self.backward_D()
         self.optimizer_D.step()
 
         self.fake_imgs = self.model_G(conditions)
 
-        self.set_requires_grad(self.model_D, False)
+        self.model_D.eval()
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
