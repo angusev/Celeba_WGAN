@@ -46,18 +46,9 @@ class Generator(nn.Module):
                     in_channels,
                     out_channels,
                     kernel_size=kernel_size,
-                    # stride=stride,
                     padding=2,
                     bias=False,
                 )
-                # nn.ConvTranspose2d(
-                #     in_channels,
-                #     out_channels,
-                #     kernel_size=kernel_size,
-                #     stride=stride,
-                #     padding=padding,
-                #     bias=False,
-                # )
             ]
             if normalize:
                 layers.append(nn.BatchNorm2d(out_channels))
