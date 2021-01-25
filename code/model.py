@@ -18,7 +18,6 @@ img_shape = (3, 218, 178)
 # Size of z latent vector (i.e. size of generator input)
 nz = 40
 
-
 class PrintLayer(nn.Module):
     def __init__(self):
         super(PrintLayer, self).__init__()
@@ -56,19 +55,12 @@ class Generator(nn.Module):
             return layers
 
         self.main = nn.Sequential(
-            PrintLayer(),
             *block(nz * 2, ngf * 8, stride=1, padding=0, normalize=False),
-            PrintLayer(),
             *block(ngf * 8, ngf * 8),
-            PrintLayer(),
             *block(ngf * 8, ngf * 8),
-            PrintLayer(),
             *block(ngf * 8, ngf * 4),
-            PrintLayer(),
             *block(ngf * 4, ngf * 2),
-            PrintLayer(),
             *block(ngf * 2, ngf),
-            PrintLayer(),
             nn.Upsample(scale_factor=2, mode='bilinear'),
             torch.nn.Conv2d(ngf, 3, 4, padding=2, bias=False),
             PrintLayer(),
@@ -105,12 +97,12 @@ class Discriminator(nn.Module):
                     out_channels,
                     kernel_size=kernel_size,
                     stride=stride,
-                    padding=normalize,
+                    padding=padding,
                     bias=False,
                 )
             ]
             if normalize:
-                layers.append(nn.BatchNorm2d(out_channels))
+                layers.append(nn.InstanceNorm2d(out_channels))
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
 
@@ -119,7 +111,8 @@ class Discriminator(nn.Module):
             *block(ndf, ndf * 2),
             *block(ndf * 2, ndf * 4),
             *block(ndf * 4, ndf * 8),
-            nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False)
+            *block(ndf * 8, ndf * 16),
+            nn.Conv2d(ndf * 16, 1, 4, 1, 0, bias=False)
         )
 
     def forward(self, images, conditions):
@@ -152,43 +145,40 @@ class WGAN(nn.Module):
         self.losses = {"loss_D": None, "loss_G": None}
         self.configs = configs
 
-    def backward_D(self, train_it=True):
-        pred_real = self.model_D(self.real_imgs, self.conditions)
-        pred_fake = self.model_D(self.fake_imgs, self.conditions)
+    def backward_D(self, real_imgs, conditions, train_it=True):
+        fake_imgs = self.model_G(conditions)
+        pred_fake = self.model_D(fake_imgs, conditions)
+        pred_real = self.model_D(real_imgs, conditions)
+
         self.loss_D = -torch.mean(pred_real) + torch.mean(pred_fake)
         if train_it:
             self.loss_D.backward()
         self.losses["loss_D"] = self.loss_D.item()
 
-    def backward_G(self, train_it=True):
-        self.loss_G = -torch.mean(self.model_D(self.fake_imgs, self.conditions))
+    def backward_G(self, real_imgs, conditions, train_it=True):
+        fake_imgs = self.model_G(conditions)
+        pred_fake = self.model_D(fake_imgs, conditions)
+
+        self.loss_G = -torch.mean(pred_fake)
         if train_it:
             self.loss_G.backward()
         self.losses["loss_G"] = self.loss_G.item()
 
     def optimize_parameters(self, images, conditions):
-        self.real_imgs = images
-        self.conditions = conditions
-        self.fake_imgs = self.model_G(conditions)
-
         self.model_D.train()
         self.optimizer_D.zero_grad()
-        self.backward_D()
+        self.backward_D(images, conditions)
         self.optimizer_D.step()
-
-        self.fake_imgs = self.model_G(conditions)
 
         self.model_D.eval()
         self.optimizer_G.zero_grad()
-        self.backward_G()
+        self.backward_G(images, conditions)
         self.optimizer_G.step()
 
     def evaluate(self, images, conditions):
-        self.real_imgs = images
-        self.fake_imgs = self.model_G(conditions)
+        self.backward_D(images, conditions, train_it=False)
+        self.backward_G(images, conditions, train_it=False)
 
-        self.backward_D(train_it=False)
-        self.backward_G(train_it=False)
 
 def weights_init(m):
     classname = m.__class__.__name__

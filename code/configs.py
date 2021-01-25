@@ -33,7 +33,7 @@ class Parser:
             "--learning_rate_G", "-lrG", type=float, default=3e-4
         )
         self.training_configs_parser.add_argument(
-            "--learning_rate_D", "-lrD", type=float, default=15e-4
+            "--learning_rate_D", "-lrD", type=float, default=3e-4
         )
         self.training_configs_parser.add_argument(
             "--epochs", "-e", type=int, default=10

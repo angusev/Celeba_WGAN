@@ -37,8 +37,6 @@ def main(args):
     paths, training_configs, launch_configs = parser.parse_args(args)
     training_configs.device = torch.device("cuda")
 
-    if launch_configs.wandb:
-        wandb.init(project="celeba_wgan", name=launch_configs.wandb)
 
     train_dataset, valid_dataset, train_loader, valid_loader = get_dataloaders(
         paths, training_configs, launch_configs
@@ -46,6 +44,10 @@ def main(args):
 
     model = WGAN(training_configs).to(training_configs.device)
     weights_init(model)
+    
+    if launch_configs.wandb:
+        wandb.init(project="celeba_wgan", name=launch_configs.wandb)
+        wandb.watch(model)
 
     try:
         for epoch in range(training_configs.epochs):
