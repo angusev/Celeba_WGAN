@@ -145,7 +145,7 @@ class WGAN(nn.Module):
         self.configs = configs
 
     def backward_D(self, real_imgs, conditions, train_it=True):
-        fake_imgs = self.model_G(conditions)
+        fake_imgs = self.model_G(conditions).detach()
         pred_fake = self.model_D(fake_imgs, conditions)
         pred_real = self.model_D(real_imgs, conditions)
 
