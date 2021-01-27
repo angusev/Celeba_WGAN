@@ -13,7 +13,7 @@ from torch.utils.data import random_split
 from torchvision import models
 
 from code.dataclasses import get_dataloaders
-from code.model import WGAN, weights_init
+from code.model import WGAN
 from code.utils import show_random_examples, save_random_examples
 from code.trainer import train, test
 from code.configs import Parser
@@ -43,7 +43,6 @@ def main(args):
     )
 
     model = WGAN(training_configs).to(training_configs.device)
-    weights_init(model)
     
     if launch_configs.wandb:
         wandb.init(project="celeba_wgan", name=launch_configs.wandb)

@@ -30,10 +30,10 @@ class Parser:
             "--batchsize", "-bs", type=int, default=16
         )
         self.training_configs_parser.add_argument(
-            "--learning_rate_G", "-lrG", type=float, default=3e-4
+            "--learning_rate_G", "-lrG", type=float, default=0.001
         )
         self.training_configs_parser.add_argument(
-            "--learning_rate_D", "-lrD", type=float, default=3e-4
+            "--learning_rate_D", "-lrD", type=float, default=0.005
         )
         self.training_configs_parser.add_argument(
             "--epochs", "-e", type=int, default=10

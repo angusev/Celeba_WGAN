@@ -23,7 +23,6 @@ class PrintLayer(nn.Module):
         super(PrintLayer, self).__init__()
 
     def forward(self, x):
-        # print(x.shape)
         return x
 
 class Generator(nn.Module):
@@ -35,7 +34,6 @@ class Generator(nn.Module):
             in_channels,
             out_channels,
             kernel_size=4,
-            stride=2,
             padding=1,
             normalize=True,
         ):
@@ -55,15 +53,16 @@ class Generator(nn.Module):
             return layers
 
         self.main = nn.Sequential(
-            *block(nz * 2, ngf * 8, stride=1, padding=0, normalize=False),
+            *block(nz * 2, ngf * 8, padding=0, normalize=False),
             *block(ngf * 8, ngf * 8),
             *block(ngf * 8, ngf * 8),
             *block(ngf * 8, ngf * 4),
             *block(ngf * 4, ngf * 2),
             *block(ngf * 2, ngf),
             nn.Upsample(scale_factor=2, mode='bilinear'),
-            torch.nn.Conv2d(ngf, 3, 4, padding=2, bias=False),
-            PrintLayer(),
+            torch.nn.Conv2d(ngf, ngf // 2, 4, padding=2, bias=False),
+            torch.nn.Conv2d(ngf // 2, ngf // 4, 4, padding=2, bias=False),
+            torch.nn.Conv2d(ngf // 4, 3, 4, padding=2, bias=False),
             nn.Tanh()
         )
 
@@ -178,12 +177,3 @@ class WGAN(nn.Module):
     def evaluate(self, images, conditions):
         self.backward_D(images, conditions, train_it=False)
         self.backward_G(images, conditions, train_it=False)
-
-
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find("Conv") != -1:
-        nn.init.xavier_normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find("BatchNorm") != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)

@@ -1,0 +1,13 @@
+img_align_celeba/
+code/__*
+.ipynb_checkpoints/
+.vscode/
+Anno/
+Untitled.ipynb
+celeba_annotations.zip
+examples/
+fid/__pycache__/
+head
+img_align_celeba.zip
+outputs/
+wandb/

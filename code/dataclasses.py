@@ -101,7 +101,7 @@ def get_dataloaders(paths, training_configs, launch_configs):
         ).to(training_configs.device)
 
     if launch_configs.dry_try:
-        files = files[::10]
+        files = files[::1000]
 
     dataset = ImageDataset(files, attrs, id2idx, make_transform())
     train_files_count = len(files) * 7 // 10
