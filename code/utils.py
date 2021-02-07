@@ -68,3 +68,13 @@ def show_random_examples(model, test_dataset, device, path):
         ax1.imshow(generated)
     plt.savefig(path, dpi=500)
     plt.show()
+
+
+@torch.no_grad()
+def save_random_examples(model, test_dataset, device, path_orig, path_gen, number=100):
+    model.eval()
+
+    for i in range(number):
+        image, generated = get_random_examples(model, test_dataset, device)
+        image.save(path_orig / f'{i}.jpg')
+        generated.save(path_gen / f'{i}.jpg')
